@@ -14,15 +14,16 @@ class UNSGameplayInterface : public UInterface
 };
 
 /**
- * 
+ *
  */
 class NSACTIONROGUELIKE_API INSGameplayInterface
 {
 	GENERATED_BODY()
 
-	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
+		// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 
+	/* Called after the Actor state was restored from a SaveGame file. */
 	UFUNCTION(BlueprintNativeEvent)
 	void Interact(APawn* InstigatorPawn);
 };

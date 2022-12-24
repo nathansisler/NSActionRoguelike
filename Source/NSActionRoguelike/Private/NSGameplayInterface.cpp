@@ -2,5 +2,4 @@
 
 
 #include "NSGameplayInterface.h"
-
 // Add default functionality here for any INSGameplayInterface functions that are not pure virtual.

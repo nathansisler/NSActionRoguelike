@@ -33,5 +33,8 @@ public:
 
 	// Sets default values for this actor's properties
 	ANSItemChest();
+	
+	UPROPERTY(EditAnywhere)
+	float TargetPitch;
 
 };
