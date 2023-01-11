@@ -8,7 +8,13 @@
 #include "NSInteractionComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Actor.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "TimerManager.h"
+#include "DrawDebugHelpers.h"
+#include "Logging/LogMacros.h"
+#include "NSProjectile.h"
 
+DECLARE_DELEGATE_OneParam(FInputSwitchAttackDelegate, const MyEnum);
 
 // Sets default values
 ANSCharacter::ANSCharacter()
@@ -64,25 +70,116 @@ void ANSCharacter::MoveRight(float value)
 	AddMovementInput(RightVector, value);
 }
 
-void ANSCharacter::PrimaryAttack()
+void ANSCharacter::SetAttackTimer(const MyEnum e)
 {
+	//FInputSwitchAttackDelegate Del;
+	FTimerDelegate PDelegate;
+	
+	switch (e)
+	{
+	case MagicProjectileE: 
+		
+		PDelegate.BindLambda([&]()
+		{
+			ANSCharacter::Attack_TimeElapsed(MagicProjectile);
+		});
+		
+		GetWorldTimerManager().SetTimer(TimerHandle_PrimaryAttack, PDelegate, 0.2, false);
 
-	GetWorldTimerManager().SetTimer(TimerHandle_PrimaryAttack, this, &ANSCharacter::PrimaryAttack_TimeElapsed, 0.2);
+		break;
+
+	case BlackholeProjectileE:
+
+		PDelegate.BindLambda([&]()
+		{
+			ANSCharacter::Attack_TimeElapsed(BlackholeProjectile);
+		});
+
+		GetWorldTimerManager().SetTimer(TimerHandle_PrimaryAttack, PDelegate, 0.2, false);
+		
+	case TeleportProjectileE:
+
+		PDelegate.BindLambda([&]()
+		{
+			ANSCharacter::Attack_TimeElapsed(TeleportProjectile);
+		});
+
+		GetWorldTimerManager().SetTimer(TimerHandle_PrimaryAttack, PDelegate, 0.2, false);
+		break;
+
+	default:
+		break;
+	}
 
 	PlayAnimMontage(AttackAnim);
-
 }
 
-void ANSCharacter::PrimaryAttack_TimeElapsed()
+void ANSCharacter::Attack_TimeElapsed(TSubclassOf<AActor> Projectile)
 {
-	FVector HandLocation = GetMesh()->GetSocketLocation("Muzzle_01");
 
-	FTransform SpawnTM = FTransform(GetControlRotation(), HandLocation);
+	FCollisionObjectQueryParams  ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldStatic);
+
+	FRotator CameraRotation = CameraComp->GetComponentRotation();
+	FVector CameraLocation = CameraComp->GetComponentLocation();
+	FVector HandLocation = GetMesh()->GetSocketLocation("Muzzle_01");
+	FVector End = CameraLocation + (CameraRotation.Vector() * 1000);;
+
+	FHitResult Hit;
+
+	bool BlockingHit = GetWorld()->LineTraceSingleByObjectType(Hit, CameraLocation, End, ObjectQueryParams);
+
+	FTransform SpawnTM;
+	FRotator MyRotation;
+
+	if(BlockingHit)
+	{
+		MyRotation = UKismetMathLibrary::FindLookAtRotation(HandLocation, Hit.Location);
+	}
+	else
+	{
+		MyRotation = UKismetMathLibrary::FindLookAtRotation(HandLocation, End);
+	}
+	
+	SpawnTM = FTransform(MyRotation, HandLocation);
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParams.Instigator = this;
 
-	GetWorld()->SpawnActor<AActor>(ProjectileClass, SpawnTM, SpawnParams);
+	FTimerDelegate PDelegate;
+
+	if (Projectile == TeleportProjectile)
+	{
+		ANSProjectile* MyProjectile = GetWorld()->SpawnActor<ANSProjectile>(Projectile, SpawnTM, SpawnParams);
+		MyProjectile->WaitForTeleport();
+
+		PDelegate.BindLambda([&]()
+			{
+				ANSCharacter::Teleport(MyProjectile);
+			});
+
+		GetWorldTimerManager().SetTimer(TimerHandle_PrimaryAttack, PDelegate, 0.2, false);
+	}
+	else
+	{
+		GetWorld()->SpawnActor<AActor>(Projectile, SpawnTM, SpawnParams);
+	}
+
+	DrawDebugLine(GetWorld(), HandLocation, Hit.Location, FColor::Blue, false, 2.0f, 0, 2.0f);
+
+}
+
+
+void ANSCharacter::Teleport(AActor* Projectile)
+{
+	//GetWorldTimerManager().SetTimer(TimerHandle_PrimaryAttack, 0.2, false);
+	//AActor DefaultBaseClassRef = Projectile->GetDefaultObject();
+	//GetWorldTimerManager().SetTimer(TimerHandle_PrimaryAttack, PDelegate, 0.2, false);
+	FString MyOb = GetNameSafe(Projectile);
+	UE_LOG(LogTemp, Warning, TEXT("Projectile: %s, at game time: %f"), *MyOb, GetWorld()->TimeSeconds);
+
 }
 
 void ANSCharacter::PrimaryInteract()
@@ -107,11 +204,16 @@ void ANSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 
-	PlayerInputComponent->BindAction("PrimaryAttack", IE_Pressed, this, &ANSCharacter::PrimaryAttack);
+	PlayerInputComponent->BindAction<FInputSwitchAttackDelegate>("PrimaryAttack", IE_Pressed, this, &ANSCharacter::SetAttackTimer, MagicProjectileE);
+
+	PlayerInputComponent->BindAction<FInputSwitchAttackDelegate>("SecondaryAttack", IE_Pressed, this, &ANSCharacter::SetAttackTimer, BlackholeProjectileE);
+	
+	PlayerInputComponent->BindAction<FInputSwitchAttackDelegate>("Teleport", IE_Pressed, this, &ANSCharacter::SetAttackTimer, TeleportProjectileE);
 
 	PlayerInputComponent->BindAction("PrimaryInteract", IE_Pressed, this, &ANSCharacter::PrimaryInteract);
 
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ANSCharacter::Jump);
+
 }
 

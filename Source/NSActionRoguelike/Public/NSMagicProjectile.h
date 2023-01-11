@@ -3,15 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "NSProjectile.h"
 #include "NSMagicProjectile.generated.h"
 
-class USphereComponent;
-class UProjectileMovementComponent;
-class UParticleSystemComponent;
+//class USphereComponent;
+//class UProjectileMovementComponent;
+//class UParticleSystemComponent;
 
 UCLASS()
-class NSACTIONROGUELIKE_API ANSMagicProjectile : public AActor
+class NSACTIONROGUELIKE_API ANSMagicProjectile : public ANSProjectile
 {
 	GENERATED_BODY()
 	
@@ -21,14 +21,14 @@ public:
 
 protected:
 
-	UPROPERTY(VisibleAnywhere)
-	USphereComponent* SphereComp;
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	//USphereComponent* SphereComp;
 
-	UPROPERTY(VisibleAnywhere)
-	UProjectileMovementComponent* MovementComp;
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	//UProjectileMovementComponent* MovementComp;
 
-	UPROPERTY(VisibleAnywhere)
-	UParticleSystemComponent* EffectComp;
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	//UParticleSystemComponent* EffectComp;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

@@ -13,6 +13,13 @@ class USpringArmComponent;
 class UNSInteractionComponent;
 class UAnimMontage;
 
+enum MyEnum
+{
+	MagicProjectileE,
+	BlackholeProjectileE,
+	TeleportProjectileE
+};
+
 UCLASS()
 class NSACTIONROGUELIKE_API ANSCharacter : public ACharacter
 {
@@ -24,7 +31,13 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere)
-	TSubclassOf<AActor> ProjectileClass;
+	TSubclassOf<AActor> MagicProjectile;
+	
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AActor> BlackholeProjectile;
+	
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AActor> TeleportProjectile;
 
 	UPROPERTY(EditAnywhere, Category = "Attack")
 	UAnimMontage* AttackAnim;
@@ -49,9 +62,11 @@ protected:
 
 	void MoveRight(float value);
 
-	void PrimaryAttack();
+	void SetAttackTimer(const MyEnum e);
 
-	void PrimaryAttack_TimeElapsed();
+	void Attack_TimeElapsed(TSubclassOf<AActor> Projectile);
+
+	void Teleport(AActor* Projectile);
 
 	void PrimaryInteract();
 
